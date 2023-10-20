@@ -1,86 +1,127 @@
 #include "shell.h"
-
 /**
- * str_length - Returns the length of a string.
- * @string: Pointer to the string.
- * Return: Length of the string.
+ * is_chain - test if current char in buffer is a chain delimeter
+ * @info: the parameter struct
+ * @buf: the char buffer
+ * @p: address of current position in buf
+ *
+ * Return: 1 if chain delimeter else 0
  */
-int str_length(char *string)
+bool is_chain(info_s *info, char *buf, size_t *p)
 {
-	int length = 0;
+	size_t j = *p;
 
-	if (string == NULL)
-		return (0);
-	while (string[length] != '\0')
+	if (buf[j] == '|' && buf[j + 1] == '|')
 	{
-		length++;
+		buf[j] = 0;
+		j++;
+		info->sep_buff_kind = OR_FLAG;
 	}
-	return (length);
-}
-
-/**
- * str_duplicate - Duplicates a string.
- * @string: String to be duplicated.
- * Return: Pointer to the duplicated string.
- */
-char *str_duplicate(char *string)
-{
-	char *result;
-	int length, i;
-
-	if (string == NULL)
-		return (NULL);
-	length = str_length(string) + 1;
-	result = malloc(sizeof(char) * length);
-	if (result == NULL)
+	else if (buf[j] == '&' && buf[j + 1] == '&')
 	{
-		errno = ENOMEM;
-		perror("Error");
-		return (NULL);
+		buf[j] = 0;
+		j++;
+		info->sep_buff_kind = AND_FLAG;
 	}
-	for (i = 0; i < length; i++)
+	else if (buf[j] == ';')
 	{
-		result[i] = string[i];
-	}
-	return (result);
-}
-
-/**
- * str_compare - Compares two strings.
- * @string1: The shorter string.
- * @string2: The longer string.
- * @num: Number of characters to be compared. 0 if infinite.
- * Return: 1 if the strings are equal, 0 if the strings are different.
- */
-int str_compare(char *string1, char *string2, int num)
-{
-	int iterator;
-
-	if (string1 == NULL && string2 == NULL)
-		return (1);
-	if (string1 == NULL || string2 == NULL)
-		return (0);
-	if (num == 0)
-	{
-		int len1 = str_length(string1);
-		int len2 = str_length(string2);
-
-		if (len1 != len2)
-			return (0);
-		for (iterator = 0; string1[iterator]; iterator++)
-		{
-			if (string1[iterator] != string2[iterator])
-				return (0);
-		}
-		return (1);
+		buf[j] = 0;
+		info->sep_buff_kind = CHAIN_FLAG;
 	}
 	else
+		return (false);
+	*p = j;
+	return (true);
+}
+
+/**
+ * check_chain - checks we should continue chaining based on last status
+ * @info: the parameter struct
+ * @buf: the char buffer
+ * @p: address of current position in buf
+ * @i: starting position in buf
+ * @len: length of buf
+ *
+ * Return: Void
+ */
+void check_chain(info_s *info, char *buf, size_t *p, size_t i, size_t len)
+{
+	size_t j = *p;
+
+	if (info->sep_buff_kind == AND_FLAG)
 	{
-		for (iterator = 0; iterator < num; iterator++)
+		if (info->status)
 		{
-			if (string1[iterator] != string2[iterator])
-				return (0);
+			buf[i] = 0;
+			j = len;
 		}
-		return (1);
 	}
+	if (info->sep_buff_kind == OR_FLAG)
+	{
+		if (!info->status)
+		{
+			buf[i] = 0;
+			j = len;
+		}
+	}
+	*p = j;
+}
+
+/**
+ * change_v - replaces vars in the tokenized string
+ * @info: the parameter struct
+ *
+ * Return: 1 if replaced, 0 otherwise
+ */
+int change_v(info_s *info)
+{
+	int i = 0;
+	list_s *node;
+
+	for (i = 0; info->argv[i]; i++)
+	{
+		if (info->argv[i][0] != '$' || !info->argv[i][1])
+			continue;
+		if (!_strcmp(info->argv[i], "$?"))
+		{
+			change_string(&(info->argv[i]),
+
+						   _strdup(change_base(info->status, 10, 0)));
+
+			continue;
+		}
+		if (!_strcmp(info->argv[i], "$$"))
+		{
+			change_string(&(info->argv[i]),
+
+						   _strdup(change_base(getpid(), 10, 0)));
+
+			continue;
+		}
+		node = node_str_start(info->env, &info->argv[i][1], '=');
+		if (node)
+		{
+			change_string(&(info->argv[i]),
+
+						   _strdup(_strchr(node->str, '=') + 1));
+
+			continue;
+		}
+		change_string(&info->argv[i], _strdup(""));
+	}
+	return (0);
+}
+/**
+ * change_string - replaces string
+ * @old: address of old string
+ * @new: new string
+ *
+ * Return: 1 if replaced, 0 otherwise
+ */
+int change_string(char **old, char *new)
+{
+	free(*old);
+	*old = new;
+
+	return (1);
 }

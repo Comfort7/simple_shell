@@ -1,81 +1,79 @@
 #include "shell.h"
 
 /**
- * long_to_string - Converts a number to a string in the specified base.
- * @num: The number to be converted to a string.
- * @string: The buffer to save the number as a string.
- * @base: The base for converting the number.
+ * from_terminal - returns true if shell is interactive mode
+ * @info: struct address
+ *
+ * Return: 1 if from_terminal mode else 0
  */
-void long_to_string(long num, char *string, int base)
-{
-	int index = 0, inNegative = 0;
-	long quotient = num;
-	char letters[] = "0123456789abcdef";
 
-	if (quotient == 0)
-		string[index++] = '0';
-	if (string[0] == '-')
-		inNegative = 1;
-	while (quotient)
-	{
-		if (quotient < 0)
-		string[index++] = letters[-(quotient % base)];
-		quotient /= base;
-	}
-	if (inNegative)
-		string[index++] = '-';
-	string[index] = '\0';
+int from_terminal(info_s *info)
+{
+	return (isatty(STDIN_FILENO) && info->fd_read <= 2);
 }
 
 /**
- * _atoi - Converts a string to an integer.
- * @s: Pointer to the string to be converted.
- * Return: The integer representation of the string, or 0 if not a
- * valid integer.
+ * _isalpha - checks for alphabetic character
+ * @c: The character to input
+ * Return: 1 if c is alphabetic else 0 if not
  */
+
+int _isalpha(int c)
+{
+	if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z'))
+		return (1);
+	else
+		return (0);
+}
+
+/**
+ * _atoi - converts a string to an integer
+ * @s: the string to be converted
+ * Return: 0 if no numbers in string else converted integer
+ */
+
 int _atoi(char *s)
 {
-	int sign = 1;
-	unsigned int num = 0;
+	int i, sign = 1, flag = 0, output;
+	unsigned int result = 0;
 
-	while (*s && (*s == ' ' || *s == '\t' || *s == '\n' || *s == '\r'))
+	for (i = 0; s[i] != '\0' && flag != 2; i++)
 	{
-		s++;
+		if (s[i] == '-')
+			sign *= -1;
+		if (s[i] >= '0' && s[i] <= '9')
+		{
+			flag = 1;
+			result *= 10;
+			result += (s[i] - '0');
+		}
+		else if (flag == 1)
+			flag = 2;
 	}
-
-	if (*s == '-')
-	{
-		sign = -1;
-		s++;
-	}
-	else if (*s == '+')
-	{
-		s++;
-	}
-
-	while (*s >= '0' && *s <= '9')
-	{
-		num = (num * 10) + (*s - '0');
-		s++;
-	}
-
-	return (num * sign);
+	if (sign == -1)
+		output = -result;
+	else
+		output = result;
+	return (output);
 }
 
 /**
- * count_characters - Counts the occurrences of a character in a string.
- * @string: Pointer to the string.
- * @character: The character to be counted.
- * Return: The count of character occurrences in the string.
+ * is_delimiter - checks if a character is a delimiter
+ * @c: Character to be checked.
+ * @delimiters: String of charaters to be compated.
+ *
+ * This function compares a character to one or more of delimiters
+ * to see if the character matches any of the delimiters.
+ *
+ * Return: True if it is a delimiter, else false.
  */
-int count_characters(char *string, char *character)
-{
-	int i = 0, counter = 0;
 
-	for (; string[i]; i++)
-	{
-		if (string[i] == character[0])
-			counter++;
-	}
-	return (counter);
+bool is_delimiter(char c, char *delimiters)
+{
+	int s;
+
+	for (s = 0; delimiters[s]; s++)
+		if (c == delimiters[s])
+			return (true);
+	return (false);
 }
